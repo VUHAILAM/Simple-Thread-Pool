@@ -2,19 +2,25 @@
 
 ThreadPool::ThreadPool()
 {
+    this->m_thread = new std::vector<std::thread>();
+    this->m_mutex = new std::mutex();
+    this->m_event_var = new std::condition_variable();
 }
 
 ThreadPool::ThreadPool(int numThread)
 {
+    this->m_thread = new std::vector<std::thread>();
+    this->m_mutex = new std::mutex();
+    this->m_event_var = new std::condition_variable();
     this->m_numThread = numThread;
 }
 
 ThreadPool::~ThreadPool()
 {
-    std::unique_lock<std::mutex> lock{m_mutex};
+    std::unique_lock<std::mutex> lock{*m_mutex};
     m_isStopping = true;
-    m_event_var.notify_all();
-    for (auto &thread : m_thread)
+    m_event_var->notify_all();
+    for (auto &thread : *m_thread)
     {
         thread.join();
     }
@@ -29,14 +35,14 @@ void ThreadPool::start()
 {
     for (int i = 0; i < m_numThread; i++)
     {
-        m_thread.emplace_back([=] {
+        m_thread->emplace_back([=] {
             while (true)
             {
                 /* code */
                 Task task;
-                std::unique_lock<std::mutex> lock{m_mutex};
+                std::unique_lock<std::mutex> lock{*m_mutex};
 
-                m_event_var.wait(lock, [=] {
+                m_event_var->wait(lock, [=] {
                     return m_isStopping || !m_task.empty();
                 });
 
@@ -45,7 +51,7 @@ void ThreadPool::start()
 
                 task = std::move(m_task.front());
                 m_task.pop();
-
+                
                 task();
             }
         });
@@ -54,7 +60,7 @@ void ThreadPool::start()
 
 void ThreadPool::enqueue(Task task)
 {
-    std::unique_lock<std::mutex> lock{m_mutex};
+    std::unique_lock<std::mutex> lock{*m_mutex};
     m_task.emplace(std::move(task));
-    m_event_var.notify_one();
+    m_event_var->notify_one();
 }

@@ -12,15 +12,6 @@ using Task = std::function<void()>;
 
 class ThreadPool
 {
-private:
-    /* data */
-    int m_numThread;
-    bool m_isStopping = false;
-    std::vector<std::thread> m_thread;
-    std::condition_variable m_event_var;
-    std::mutex m_mutex;
-    std::queue<Task> m_task;
-
 public:
     ThreadPool(/* args */);
     ThreadPool(int numThread);
@@ -28,6 +19,16 @@ public:
     int pool_size();
     void start();
     void enqueue(Task task);
+
+private:
+    /* data */
+    int m_numThread;
+    bool m_isStopping = false;
+    std::vector<std::thread> *m_thread = nullptr;
+    std::queue<Task> m_task;
+
+    std::condition_variable *m_event_var = nullptr;
+    std::mutex *m_mutex = nullptr;
 };
 
 #endif //THREADPOOL_HPP
